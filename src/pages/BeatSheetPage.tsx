@@ -5,7 +5,9 @@ import Xarrow from 'react-xarrows';
 import { BeatCard } from '../components/BeatCard';
 import { ScenePanel } from '../components/ScenePanel';
 import { useStoryStore } from '../store/storyStore';
-import { Beat } from '../types/beat';
+import { Beat, GeneratedScenesResponse } from '../types/beat';
+import { BeatArrows } from '../components/BeatArrows';
+
 
 const ACTS = ['Act 1', 'Act 2A', 'Act 2B', 'Act 3'] as const;
 
@@ -28,6 +30,15 @@ export function BeatSheetPage() {
 
   const handleGenerateScript = () => {
     console.log('Generating script...');
+  };
+
+  const handleGenerateScenes = async (beatId: string): Promise<GeneratedScenesResponse> => {
+    try {
+      return await generateScenes(beatId);
+    } catch (error) {
+      // Make sure to still return a Promise<GeneratedScenesResponse>
+      throw error;
+    }
   };
 
   const handleShowScenes = (beat: Beat) => {
@@ -84,36 +95,25 @@ export function BeatSheetPage() {
             
             {/* Beats canvas */}
             <div ref={canvasRef} className="relative overflow-x-auto">
-              {beatsByAct.map(({ act, beats }) => (
+              {beatsByAct.map(({ act, beats: actBeats }) => (
                 <div 
                   key={act} 
                   className="h-[220px] relative border-b last:border-b-0 whitespace-nowrap"
-                  style={{ minWidth: beats.length * 320 + 40 }}
+                  style={{ minWidth: actBeats.length * 320 + 40 }}
                 >
-                    {beats.map((beat, index) => (
-                      <React.Fragment key={beat.id}>
-                        <BeatCard
-                          beat={beat}
-                          onUpdate={updateBeat}
-                          onPositionChange={updateBeatPosition}
-                          onValidate={validateBeat}
-                          onGenerateScenes={generateScenes}
-                          onShowScenes={() => handleShowScenes(beat)}
-                          isSelected={selectedBeat?.id === beat.id}
-                        />
-                        {index < beats.length - 1 && (
-                          <Xarrow
-                            start={`beat-${beat.id}`}
-                            end={`beat-${beats[index + 1].id}`}
-                            color="#94a3b8"
-                            strokeWidth={2}
-                            path="straight"
-                            startAnchor="right"
-                            endAnchor="left"
-                          />
-                        )}
-                      </React.Fragment>
-                    ))}
+                  {actBeats.map((beat) => (
+                    <BeatCard
+                      key={beat.id}
+                      beat={beat}
+                      onUpdate={updateBeat}
+                      onPositionChange={updateBeatPosition}
+                      onValidate={validateBeat}
+                      onGenerateScenes={handleGenerateScenes}
+                      onShowScenes={() => handleShowScenes(beat)}
+                      isSelected={selectedBeat?.id === beat.id}
+                    />
+                  ))}
+                  <BeatArrows beats={actBeats} />
                 </div>
               ))}
             </div>

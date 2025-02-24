@@ -1,6 +1,12 @@
+// import { create } from 'zustand';
+// import { StoryState, Beat, Scene, ApiBeat } from '../types/beat';
+// import { api } from '../services/api';
+
 import { create } from 'zustand';
-import { StoryState, Beat, Scene, ApiBeat } from '../types/beat';
+import { StoryState, Beat, Scene, ApiBeat, GeneratedScenesResponse, Scenes } from '../types/beat';
 import { api } from '../services/api';
+
+
 
 const mapActFromApi = (apiAct: string): Beat['act'] => {
   const actMap: Record<string, Beat['act']> = {
@@ -12,27 +18,64 @@ const mapActFromApi = (apiAct: string): Beat['act'] => {
   return actMap[apiAct.toLowerCase()] || 'Act 1';
 };
 
-const mockGenerateScenes = (description: string): Scene[] => {
+const mapSceneToSimpleScene = (scene: Scenes): Scene => ({
+  id: scene.id,
+  description: scene.scene_detail_for_ui,
+  notes: ''  // Since the API doesn't provide notes, we'll set a default empty string
+});
+
+
+
+const mockGenerateScenes = (beatId: string): Scenes[] => {
+  const now = new Date().toISOString();
   return [
     {
-      id: `scene-${Math.random()}`,
-      description: 'Scene 1: Character establishes their normal world',
-      notes: ''
+      id: `scene-${Math.random().toString(36).substr(2, 9)}`,
+      beat_id: beatId,
+      position: 1,
+      scene_heading: "Opening Scene",
+      scene_description: "Character establishes their normal world",
+      scene_detail_for_ui: "Opening Scene: Character establishes their normal world",
+      created_at: now,
+      updated_at: null,
+      is_deleted: false,
+      deleted_at: null
     },
     {
-      id: `scene-${Math.random()}`,
-      description: 'Scene 2: Introduce the main conflict or challenge',
-      notes: ''
+      id: `scene-${Math.random().toString(36).substr(2, 9)}`,
+      beat_id: beatId,
+      position: 2,
+      scene_heading: "Conflict Introduction",
+      scene_description: "Introduce the main conflict or challenge",
+      scene_detail_for_ui: "Conflict Introduction: Introduce the main conflict or challenge",
+      created_at: now,
+      updated_at: null,
+      is_deleted: false,
+      deleted_at: null
     },
     {
-      id: `scene-${Math.random()}`,
-      description: 'Scene 3: Character makes a decision or takes action',
-      notes: ''
+      id: `scene-${Math.random().toString(36).substr(2, 9)}`,
+      beat_id: beatId,
+      position: 3,
+      scene_heading: "Decision Point",
+      scene_description: "Character makes a decision or takes action",
+      scene_detail_for_ui: "Decision Point: Character makes a decision or takes action",
+      created_at: now,
+      updated_at: null,
+      is_deleted: false,
+      deleted_at: null
     },
     {
-      id: `scene-${Math.random()}`,
-      description: 'Scene 4: Show the immediate consequences',
-      notes: ''
+      id: `scene-${Math.random().toString(36).substr(2, 9)}`,
+      beat_id: beatId,
+      position: 4,
+      scene_heading: "Consequences",
+      scene_description: "Show the immediate consequences",
+      scene_detail_for_ui: "Consequences: Show the immediate consequences",
+      created_at: now,
+      updated_at: null,
+      is_deleted: false,
+      deleted_at: null
     }
   ];
 };
@@ -72,12 +115,20 @@ export const useStoryStore = create<StoryState>((set) => ({
   },
   addBeat: (beat: Beat) =>
     set((state) => ({ beats: [...state.beats, beat] })),
+  // updateBeat: (id: string, beatUpdate: Partial<Beat>) =>
+  //   set((state) => ({
+  //     beats: state.beats.map((b) =>
+  //       b.id === id ? { ...b, ...beatUpdate } : b
+  //     ),
+  //   })),
   updateBeat: (id: string, beatUpdate: Partial<Beat>) =>
-    set((state) => ({
-      beats: state.beats.map((b) =>
+    set((state) => {
+      const updatedBeats: Beat[] = state.beats.map((b) =>
         b.id === id ? { ...b, ...beatUpdate } : b
-      ),
-    })),
+      );
+      return { beats: updatedBeats };
+    }),
+  
   updateBeatPosition: (id: string, position: { x: number; y: number }) =>
     set((state) => ({
       beats: state.beats.map((b) =>
@@ -90,15 +141,33 @@ export const useStoryStore = create<StoryState>((set) => ({
         b.id === id ? { ...b, isValidated: true } : b
       ),
     })),
-  generateScenes: (beatId: string) =>
-    set((state) => ({
-      beats: state.beats.map((b) =>
-        b.id === beatId
-          ? { ...b, scenes: mockGenerateScenes(b.description) }
-          : b
-      ),
-    })),
-  generateScenesForAct: (act: Beat['act']) =>
+
+    generateScenes: async (beatId: string): Promise<GeneratedScenesResponse> => {
+      try {
+        const response = await api.generateScenes(beatId);
+        
+        set((state) => {
+          const updatedBeats: Beat[] = state.beats.map((b) =>
+            b.id === beatId
+              ? { 
+                  ...b, 
+                  scenes: response.generated_scenes,  // Directly use the Scenes array
+                  isValidated: true 
+                }
+              : b
+          );
+          
+          return { beats: updatedBeats };
+        });
+    
+        return response;
+      } catch (error) {
+        console.error('Failed to generate scenes:', error);
+        throw error;
+      }
+    },
+    
+    generateScenesForAct: (act: Beat['act']) =>
     set((state) => ({
       beats: state.beats.map((b) =>
         b.act === act
