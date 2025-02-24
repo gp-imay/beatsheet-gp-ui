@@ -1,13 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PenLine, FileText } from 'lucide-react';
-import Xarrow from 'react-xarrows';
+import { PenLine, FileText, RefreshCcw, AlertCircle } from 'lucide-react';
 import { BeatCard } from '../components/BeatCard';
 import { ScenePanel } from '../components/ScenePanel';
 import { useStoryStore } from '../store/storyStore';
 import { Beat, GeneratedScenesResponse } from '../types/beat';
 import { BeatArrows } from '../components/BeatArrows';
-
 
 const ACTS = ['Act 1', 'Act 2A', 'Act 2B', 'Act 3'] as const;
 
@@ -15,7 +13,18 @@ export function BeatSheetPage() {
   const navigate = useNavigate();
   const canvasRef = useRef<HTMLDivElement>(null);
   const [selectedBeat, setSelectedBeat] = useState<Beat | null>(null);
-  const { premise, beats, fetchBeats, updateBeat, updateBeatPosition, validateBeat, generateScenes, generateScenesForAct } = useStoryStore();
+  const { 
+    premise, 
+    beats, 
+    fetchBeats, 
+    updateBeat, 
+    updateBeatPosition, 
+    validateBeat, 
+    generateScenes, 
+    generateScenesForAct,
+    isGeneratingActScenes,
+    actGenerationErrors
+  } = useStoryStore();
 
   useEffect(() => {
     if (!premise) {
@@ -36,7 +45,6 @@ export function BeatSheetPage() {
     try {
       return await generateScenes(beatId);
     } catch (error) {
-      // Make sure to still return a Promise<GeneratedScenesResponse>
       throw error;
     }
   };
@@ -45,6 +53,9 @@ export function BeatSheetPage() {
     setSelectedBeat(selectedBeat?.id === beat.id ? null : beat);
   };
 
+  const handleGenerateScenesForAct = (act: Beat['act']) => {
+    generateScenesForAct(act);
+  };
 
   const beatsByAct = ACTS.map(act => ({
     act,
@@ -83,11 +94,31 @@ export function BeatSheetPage() {
                   <div className="h-[220px] flex items-center justify-center border-b last:border-b-0 font-medium text-gray-600">
                     {act}
                   </div>
+                  
+                  {actGenerationErrors[act] && (
+                    <div className="absolute top-2 left-2 right-2 p-2 text-xs text-red-600 bg-red-50 rounded-md flex items-center">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0 mr-1" />
+                      <span className="truncate">{actGenerationErrors[act]}</span>
+                    </div>
+                  )}
+                  
                   <button
-                    onClick={() => generateScenesForAct(act)}
-                    className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-blue-600 hover:text-blue-700 whitespace-nowrap px-2 py-1 bg-white rounded-full shadow-sm border border-blue-100"
+                    onClick={() => handleGenerateScenesForAct(act)}
+                    disabled={isGeneratingActScenes[act]}
+                    className={`absolute bottom-2 left-1/2 -translate-x-1/2 text-xs ${
+                      isGeneratingActScenes[act] 
+                        ? 'text-gray-500 bg-gray-100' 
+                        : 'text-blue-600 hover:text-blue-700 bg-white hover:bg-blue-50'
+                    } whitespace-nowrap px-2 py-1 rounded-full shadow-sm border border-blue-100 flex items-center justify-center gap-1 min-w-24`}
                   >
-                    Generate Scenes
+                    {isGeneratingActScenes[act] ? (
+                      <>
+                        <RefreshCcw className="w-3 h-3 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      'Generate Scenes'
+                    )}
                   </button>
                 </div>
               ))}

@@ -67,3 +67,21 @@ export interface GeneratedScenesResponse {
   };
   generated_scenes: Scenes[];
 }
+
+export interface ActSceneGenerationBeat {
+  beat_id: string;
+  beat_title: string;
+  start_idx: number;
+  end_idx: number;
+}
+
+export interface ActSceneGenerationContext {
+  script_id: string;
+  script_title: string;
+  genre: string;
+  act: string;
+  total_beats: number;
+  existing: ActSceneGenerationBeat[];
+  generated: any[];
+  source: string;
+}
